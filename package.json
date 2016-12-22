@@ -1,0 +1,47 @@
+{
+  "name": "i3-status-gitlab",
+  "version": "1.0.0",
+  "description": "Build status monitor for gitlab-ci and i3-status",
+  "main": "lib/index.js",
+  "scripts": {
+    "prepublish": "npm run compile",
+    "compile": "babel src/ -d lib -s",
+    "test": "npm run compile && node_modules/mocha/bin/mocha --compilers js:babel-register test --recursive --reporter gitlablist-mocha",
+    "watch": "npm run compile && (babel -w src/ -d lib -s &) && node_modules/mocha/bin/mocha --compilers js:babel-register test --recursive  --reporter min --watch",
+    "cover": "npm run compile && istanbul cover node_modules/mocha/bin/_mocha -- --compilers js:babel-core/register --colors --reporter dot test/ --recursive"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@git.sexy-developer.com:cfe/i3-status-gitlab.git"
+  },
+  "babel": {
+    "presets": [
+      "latest"
+    ]
+  },
+  "keywords": [
+    "i3",
+    "i3wm",
+    "gitlab",
+    "gitlabci",
+    "i3-status",
+    "i3-status-module",
+    "i3block"
+  ],
+  "author": "Christian Fehmer",
+  "license": "MIT",
+  "dependencies": {
+    "request": "^2.79.0",
+    "winston": "^2.3.0"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.18.0",
+    "babel-preset-latest": "^6.16.0",
+    "chai": "^3.5.0",
+    "codacy-coverage": "^2.0.0",
+    "gitlablist-mocha": "^1.0.2",
+    "istanbul": "^1.1.0-alpha.1",
+    "mocha": "^3.2.0",
+    "mockyeah": "^0.15.6"
+  }
+}
