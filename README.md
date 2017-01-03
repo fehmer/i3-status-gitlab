@@ -48,6 +48,7 @@ This config will show the status of all projects you can access with the gitlab 
 ``` yaml
   - name: gitlab
     module: i3-status-gitlab
+    interval: 300 # refresh each 5 minutes
     label: ci
     url: https://git.yourserver.tld/api/v3
     token: 'secretToken'   #see below how to get one
@@ -61,6 +62,7 @@ This config will show the status of a single project only. If you want to determ
 ``` yaml
   - name: gitlab
     module: i3-status-gitlab
+    interval: 300 # refresh each 5 minutes
     label: 'Project A'
     url: https://git.yourserver.tld/api/v3
     token: 'secretToken'   #see below how to get one
@@ -76,6 +78,7 @@ This config will show the status of multiple projects. If you want to determine 
 ``` yaml
   - name: gitlab
     module: i3-status-gitlab
+    interval: 300 # refresh each 5 minutes
     label: 'ci'
     url: https://git.yourserver.tld/api/v3
     token: 'secretToken'   #see below how to get one
@@ -87,6 +90,8 @@ This config will show the status of multiple projects. If you want to determine 
 
 
 ## Configuration values
+
+Common configuration values like label and interval are described in the [i3-status documentation](https://github.com/fehmer/i3-status/blob/master/docs/configuration.md)
 
 
 ### url

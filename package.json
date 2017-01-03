@@ -1,6 +1,6 @@
 {
   "name": "i3-status-gitlab",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Build status monitor for gitlab-ci and i3-status",
   "main": "lib/index.js",
   "scripts": {
@@ -12,7 +12,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git@git.sexy-developer.com:cfe/i3-status-gitlab.git"
+    "url": "git@github.com:fehmer/i3-status-gitlab.git"
   },
   "babel": {
     "presets": [
