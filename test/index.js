@@ -4,10 +4,6 @@ import { expect } from 'chai';
 import server from 'mockyeah';
 import GitlabCi from './../lib/index';
 import request from 'request';
-import logger from 'winston';
-
-
-logger.level = 'OFF';
 
 const options = {
     url: 'http://localhost:4001',
@@ -38,9 +34,11 @@ describe('Gitlab Module', function() {
         it('should use custom status', () => {
             //use a config with custom status texts
             var config = Object.assign({}, options, {
-                status: {
-                    success: 'OK',
-                    failure: 'DOOMED'
+                success: {
+                    text: 'OK'
+                },
+                failure: {
+                    text: 'DOOMED'
                 }
             });
 
@@ -55,7 +53,7 @@ describe('Gitlab Module', function() {
         it('should use default colors if enabled', () => {
             //enable colors in config
             var config = Object.assign({}, options, {
-                color: true
+                colorize: true
             });
 
             //construct block
@@ -69,10 +67,13 @@ describe('Gitlab Module', function() {
         it('should use custom colors', () => {
             //enable colors in config
             var config = Object.assign({}, options, {
-                color: {
-                    success: '#88FF88',
-                    failure: '#FF8888'
+                success: {
+                    color: '#88FF88'
+                },
+                failure: {
+                    color: '#FF8888'
                 }
+
             });
 
             //construct block

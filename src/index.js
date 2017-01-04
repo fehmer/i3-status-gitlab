@@ -2,13 +2,14 @@
 
 import { EventEmitter } from 'events';
 import request from 'request';
-import logger from 'winston';
 
 export default class Gitlab extends EventEmitter {
     constructor(givenOptions, output) {
         super();
         var options = Object.assign({}, givenOptions || {});
-        options.status = options.status || {};
+        options.success = options.success || {};
+        options.failure = options.failure || {};
+
         this.output = output || {};
 
 
@@ -25,15 +26,15 @@ export default class Gitlab extends EventEmitter {
 
         //use given status text or use defaults
         this.status = {
-            success: options.status.success || '',
-            failure: options.status.failure || ''
+            success: options.success.text || '',
+            failure: options.failure.text || ''
         }
 
-        //if color=true or colors defined use them
-        if (options.color) {
+        //if colorize=true or colors defined use them
+        if (options.colorize || options.success.color || options.failure.color) {
             this.color = {
-                success: options.color.success || '#00FF00',
-                failure: options.color.failure || '#FF0000'
+                success: options.success.color || '#00FF00',
+                failure: options.failure.color || '#FF0000'
             }
         } else {
             //don't use any colors if color is false or not defined
@@ -105,7 +106,6 @@ export default class Gitlab extends EventEmitter {
                 }
             }, (error, response, body) => {
                 if (error || response.statusCode != 200) {
-                    logger.warn('error reading build status for %d: ', project, error || 'got response code ' + response.statusCode);
                     reject(error || 'Error: Got response code ' + response.statusCode);
                 } else {
                     var result = JSON.parse(body);
@@ -160,7 +160,6 @@ export default class Gitlab extends EventEmitter {
                 }
             }, (error, response, body) => {
                 if (error || response.statusCode != 200) {
-                    logger.warn('error reading all available projects: ', error || 'got response code ' + response.statusCode);
                     reject(error || 'Error: Got response code ' + response.statusCode);
                 } else {
                     var result = JSON.parse(body);

@@ -1,6 +1,6 @@
 {
   "name": "i3-status-gitlab",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Build status monitor for gitlab-ci and i3-status",
   "main": "lib/index.js",
   "scripts": {
@@ -31,8 +31,7 @@
   "author": "Christian Fehmer",
   "license": "MIT",
   "dependencies": {
-    "request": "^2.79.0",
-    "winston": "^2.3.0"
+    "request": "^2.79.0"
   },
   "devDependencies": {
     "babel-cli": "^6.18.0",

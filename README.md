@@ -23,8 +23,7 @@ This module for [i3-status](https://www.npmjs.com/package/i3-status) displays th
 - [Configuration values](#configuration-values)
   - [url](#url)
   - [token](#token)
-  - [color](#color)
-  - [status](#status)
+  - [Modify the output](#modify-the-output)
 
 <!-- /MarkdownTOC -->
 
@@ -104,26 +103,23 @@ Common configuration values like label and interval are described in the [i3-sta
 *mandatory*. You need to register a private token for this module. Login to your gitlab server and open the *profile settings*. Under access tokens create a new personal access token with a name like *i3-status*.
 
 
-### color
+### Modify the output 
 
-When you activate the color option with ```color: true``` a successful build state is shown in green and a failed build state in red. 
-
-You can define the colors for successful and failed builds:
+When you activate the colorize option a successful build state is shown in green and a failed build state in red. 
 
 ``` yaml
-    color:
-      success: '#AAFFAA'
-      failure: '#FFAAAA'
+    colorize: true
 ```
 
 
-### status
-
-You can define the texts for successful and failed builds. The default is **** for successful and **** for failed builds.
+You can define the texts and colors for successful and failed builds.
+The default text is **** for successful and **** for failed builds.
 
 ``` yaml
-    status:
-      success: all systems are go
-      failure: hudson, we have a problem
+    success:
+      color: '#AAFFAA'
+      text: all systems are go
+    failure:
+      color: '#FFAAAA'
+      text: hudson, we have a problem
 ```
-
