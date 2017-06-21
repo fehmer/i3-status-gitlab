@@ -6,6 +6,7 @@ import GitlabCi from './../lib/index';
 import request from 'request';
 
 const options = {
+    projectUrl: 'http://localhost',
     url: 'http://localhost:4001',
     token: 'mySecretToken'
 }
@@ -24,11 +25,16 @@ describe('Gitlab Module', function() {
             expect(block.token).to.equal('mySecretToken');
 
             //expect the status text to be the default values
-            expect(block.status.success).to.equal('');
-            expect(block.status.failure).to.equal('');
+            expect(block.success.text).to.equal('');
+            expect(block.failure.text).to.equal('');
 
             //expect color to be false
-            expect(block.color).to.be.false;
+            expect(block.colorize).to.be.false;
+
+            //report defaults
+            expect(block.report.dots).to.be.true;
+            expect(block.report.showSuccess).to.be.false;
+            expect(block.report.sortByName).to.be.false;
         });
 
         it('should use custom status', () => {
@@ -46,8 +52,8 @@ describe('Gitlab Module', function() {
             var block = new GitlabCi(config);
 
             //expect the custom status texts to be set
-            expect(block.status.success).to.equal('OK');
-            expect(block.status.failure).to.equal('DOOMED');
+            expect(block.success.text).to.equal('OK');
+            expect(block.failure.text).to.equal('DOOMED');
         });
 
         it('should use default colors if enabled', () => {
@@ -60,8 +66,8 @@ describe('Gitlab Module', function() {
             var block = new GitlabCi(config);
 
             //check colors
-            expect(block.color.success).to.equal('#00FF00');
-            expect(block.color.failure).to.equal('#FF0000');
+            expect(block.success.color).to.equal('#00FF00');
+            expect(block.failure.color).to.equal('#FF0000');
         });
 
         it('should use custom colors', () => {
@@ -80,8 +86,8 @@ describe('Gitlab Module', function() {
             var block = new GitlabCi(config);
 
             //check colors
-            expect(block.color.success).to.equal('#88FF88');
-            expect(block.color.failure).to.equal('#FF8888');
+            expect(block.success.color).to.equal('#88FF88');
+            expect(block.failure.color).to.equal('#FF8888');
         });
 
         it('should use simple project', () => {
@@ -358,7 +364,10 @@ describe('Gitlab Module', function() {
             const expectations = new Array(4);
 
             expectations.push(mock('/projects/', {
-                simple: 'true'
+                simple: 'true',
+                page: '1',
+                per_page: '999999',
+                member: 'true'
             }, [{
                 "id": 21
 
@@ -412,7 +421,10 @@ describe('Gitlab Module', function() {
 
 
             expectations.push(mock('/projects/', {
-                simple: 'true'
+                simple: 'true',
+                page: '1',
+                per_page: '999999',
+                member: 'true'
             }, [{
                 "id": 21
             }, {
@@ -454,6 +466,63 @@ describe('Gitlab Module', function() {
             });
         });
 
+        it('should handle all projects', (done) => {
+
+            //construct block
+            var config = Object.assign({}, options, {
+                membersOnly: false
+            });
+            var block = new GitlabCi(config, {});
+
+            //prepare mock responses
+            const expectations = new Array(4);
+
+            expectations.push(mock('/projects/', {
+                simple: 'true',
+                page: '1',
+                per_page: '999999',
+                member: 'true'
+            }, [{
+                "id": 21
+            }, {
+                "id": 22
+            }, {
+                "id": 23
+            }]));
+
+            expectations.push(mock('/projects/21/builds', {
+                per_page: '1'
+            }, [{
+                "id": 334,
+                "status": "success"
+            }]));
+            expectations.push(mock('/projects/22/builds', {
+                per_page: '1'
+            }, [{
+                "id": 4711,
+                "status": "success"
+            }]));
+            expectations.push(mock('/projects/23/builds', {
+                per_page: '1'
+            }, [{
+                "id": 66,
+                "status": "success"
+            }]));
+
+            execute(block, (output) => {
+                //verify server interaction
+                expectations.forEach((expectation) => {
+                    expectation.verify()
+                });
+
+                //check output line
+                expect(output.short_text).to.equal('');
+                expect(output.full_text).to.equal('');
+
+                done();
+            });
+        });
+
         it('should handle errors', (done) => {
 
             //construct block, show only a single project
@@ -471,6 +540,151 @@ describe('Gitlab Module', function() {
     });
 
 
+    describe('generateHtmlStatus', function() {
+        const prepResults = [
+            {
+                id: 1,
+                build: true,
+                ok: false,
+                url: 'http://example.org/1',
+                project: 'Success Build Example 1'
+            },
+            {
+                id: 2,
+                build: true,
+                ok: true,
+                url: 'http://example.org/2',
+                project: 'Example 2'
+            }];
+
+        const baseConfig = {
+            projectUrl: 'http://example.org',
+            success: {
+                color: 'green'
+            },
+            failure: {
+                color: 'red'
+            }
+        };
+
+        it('should print with dots', (done) => {
+            //construct block
+            var config = Object.assign({}, options, baseConfig);
+
+            var block = new GitlabCi(config);
+
+            var html = block.generateHtmlStatus(prepResults);
+            html.then(output => {
+                expect(output.header).to.equal('Failed builds on http://example.org');
+                expect(output.userStyle).to.equal('.project-green a {color: green} .project-red a {color: red}.circle{width: 1em;height: 1em;float: left;border-radius: 50%;margin-right: .5em;}.circle-green {background: green} .circle-red  {background: red}');
+                expect(output.content).to.equal('<ul><li><div class="circle circle-red"></div><a href="http://example.org/1">Success Build Example 1</a></li><li><div class="circle circle-green"></div><a href="http://example.org/2">Example 2</a></li></ul>');
+
+                done();
+            });
+        });
+
+        it('should not print dots if configured', (done) => {
+            //construct block
+            var config = Object.assign({}, options, baseConfig, {
+                report: {
+                    dots: false
+                }
+            });
+
+            var block = new GitlabCi(config);
+
+            var html = block.generateHtmlStatus(prepResults);
+            html.then(output => {
+                expect(output.header).to.equal('Failed builds on http://example.org');
+                expect(output.userStyle).to.equal('.project-green a {color: green} .project-red a {color: red}.circle{width: 1em;height: 1em;float: left;border-radius: 50%;margin-right: .5em;}.circle-green {background: green} .circle-red  {background: red}');
+                expect(output.content).to.equal('<ul><li class="project-red"><a href="http://example.org/1">Success Build Example 1</a></li><li class="project-green"><a href="http://example.org/2">Example 2</a></li></ul>');
+
+
+                done();
+            });
+
+        });
+
+    });
+
+
+    describe('filterAndSort', function() {
+        const prepResults = [
+            {
+                id: 1,
+                build: true,
+                ok: false,
+                project: 'Non Good Project'
+            },
+            {
+                id: 2,
+                build: true,
+                ok: true,
+                project: 'Build Sucessfull'
+            },
+            {
+                id: 2,
+                build: false,
+                ok: true
+            }];
+
+
+        it('filter out all successfull projects and projects without build', (done) => {
+            //construct block
+            var config = Object.assign({}, options);
+
+            var block = new GitlabCi(config);
+
+            block.filterAndSort(prepResults)
+                .then(result => {
+                    expect(result).to.have.lengthOf(1);
+                    expect(result[0].id).to.equal(1);
+                    done();
+                })
+        });
+
+        it('filter out projects without build', (done) => {
+            //construct block
+            var config = Object.assign({}, options, {
+                report: {
+                    showSuccess: true
+                }
+            });
+
+            var block = new GitlabCi(config);
+
+            block.filterAndSort(prepResults)
+                .then(result => {
+                    expect(result).to.have.lengthOf(2);
+                    expect(result[0].id).to.equal(1);
+                    expect(result[1].id).to.equal(2);
+                    done();
+                })
+        });
+
+        it('filter out projects without build and sort by project name', (done) => {
+            //construct block
+            var config = Object.assign({}, options, {
+                report: {
+                    showSuccess: true,
+                    sortByName: true
+                }
+            });
+
+            var block = new GitlabCi(config);
+
+            block.filterAndSort(prepResults)
+                .then(result => {
+                    expect(result).to.have.lengthOf(2);
+                    expect(result[0].id).to.equal(2);
+                    expect(result[1].id).to.equal(1);
+                    done();
+                })
+        });
+
+
+
+    });
 
 })
 
