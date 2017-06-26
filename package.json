@@ -31,7 +31,6 @@
   "author": "Christian Fehmer",
   "license": "MIT",
   "dependencies": {
-    "lodash.defaultsdeep": "^4.6.0",
     "request": "^2.79.0"
   },
   "devDependencies": {

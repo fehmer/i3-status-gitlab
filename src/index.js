@@ -2,8 +2,6 @@
 
 import { EventEmitter } from 'events';
 import request from 'request';
-import defaults from 'lodash.defaultsdeep'
-
 
 const defaultParameter = {
     colorize: false,
@@ -24,46 +22,58 @@ const defaultParameter = {
 }
 
 export default class Gitlab extends EventEmitter {
-    constructor(givenOptions, output) {
+    constructor({ //
+            url, //
+            projectUrl, //
+            token, //
+            project, //
+            success, //
+            failure, //
+            colorize = (failure && failure.color) || (success && success.color) || false, //
+            memberOnly = true, //
+            report //
+        } = {}, output) {
+
         super();
-        const options = defaults(Object.assign({}, givenOptions), defaultParameter);
-        this.output = Object.assign({}, output);
-        this._cache = {};
 
         //check if mandatory options are present
-        if (!options.url)
+        if (!url)
             throw new Error('config value url is missing');
-        if (!options.token)
+        if (!token)
             throw new Error('config value token is missing');
-        if (!options.projectUrl)
+        if (!projectUrl)
             throw new Error('config value projectUrl is missing');
 
-        //store custom config
-        this.project = options.project;
-        this.url = options.url;
-        this.token = options.token;
-        this.projectUrl = options.projectUrl;
-        this.success = options.success;
-        this.failure = options.failure;
-        this.colorize = options.colorize;
-        this.memberOnly = options.memberOnly;
+        // set fieldy, apply default parameter
+        Object.assign(this, {
+            output: Object.assign({}, output),
+            url,
+            projectUrl,
+            token,
+            project,
+            success: Object.assign({}, defaultParameter.success, success),
+            failure: Object.assign({}, defaultParameter.failure, failure),
+            colorize,
+            memberOnly,
+            report: Object.assign({}, defaultParameter.report, report),
+            _cache: {}
+        });
 
-        if ((givenOptions.failure && givenOptions.failure.color) || (givenOptions.success && givenOptions.success.color)) {
-            this.colorize = true;
-        }
 
-        this.report = options.report;
-        this.report.userStyle = `.project-green a {color: ${this.success.color}} .project-red a {color: ${this.failure.color}}`;
-        this.report.userStyle += '.circle{width: 1em;height: 1em;float: left;border-radius: 50%;margin-right: .5em;}';
-        this.report.userStyle += `.circle-green {background: ${this.success.color}} .circle-red  {background: ${this.failure.color}}`;
+        this.report.userStyle = `.project-green a {color: ${this.success.color}}
+.project-red a {color: ${this.failure.color}}
+.circle{width: 1em;height: 1em;float: left;border-radius: 50%;margin-right: .5em;}'
+.circle-green {background: ${this.success.color}}
+.circle-red  {background: ${this.failure.color}}`;
+
     }
 
     update() {
         this.getProjectsToRead(this.project)
             .then(projects => this.readMultipleProjects(projects))
-            .then((results) => {
+            .then(results => {
                 this.lastResult = results.filter(p => p.build);
-                var brokenProjects = results.filter(p => !p.ok);
+                const brokenProjects = results.filter(p => !p.ok);
                 this.setOutput(brokenProjects);
             })
             .catch(error => this.handleError(error));
@@ -80,7 +90,7 @@ export default class Gitlab extends EventEmitter {
 
     setOutput(brokenProjects) {
         const ok = brokenProjects.length == 0;
-        var text = ok ? this.success.text : this.failure.text;
+        let text = ok ? this.success.text : this.failure.text;
 
         if (!ok && brokenProjects && brokenProjects.length > 1) {
             text += ` (${brokenProjects.length})`;
@@ -111,7 +121,7 @@ export default class Gitlab extends EventEmitter {
     getProjectsToRead(config) {
         if (typeof config === 'number') {
             //convert into an array
-            return Promise.resolve([config]);
+            return Promise.resolve(Array.of(config));
         } else if (Array.isArray(config)) {
             //simply return the config as a promise
             return Promise.resolve(config);
@@ -137,7 +147,7 @@ export default class Gitlab extends EventEmitter {
                 if (error || response.statusCode != 200) {
                     return reject(error || 'Error: Got response code ' + response.statusCode);
                 } else {
-                    var result = JSON.parse(body);
+                    const result = JSON.parse(body);
                     if (result.length == 0)
                         return resolve({
                             id: project,
@@ -166,7 +176,7 @@ export default class Gitlab extends EventEmitter {
                 if (error || response.statusCode != 200) {
                     return reject(error || 'Error: Got response code ' + response.statusCode);
                 } else {
-                    var result = JSON.parse(body);
+                    const result = JSON.parse(body);
                     //reduce to array of project ids.
                     return resolve(result.map(project => project.id));
                 }
@@ -193,8 +203,8 @@ export default class Gitlab extends EventEmitter {
         const cache = this._cache;
 
         return new Promise((resolve, reject) => {
-            var result = cache[project];
-            if (result) return resolve(result);
+            const cached = cache[project];
+            if (cached) return resolve(cached);
 
             request({
                 url: `${this.url}/projects/${project}`,
@@ -205,7 +215,7 @@ export default class Gitlab extends EventEmitter {
                 if (error || response.statusCode != 200) {
                     return reject(error || 'Error: Got response code ' + response.statusCode);
                 } else {
-                    var result = JSON.parse(body);
+                    const result = JSON.parse(body);
                     cache[project] = result;
                     return resolve(result);
                 }
@@ -215,7 +225,7 @@ export default class Gitlab extends EventEmitter {
 
     filterAndSort(projects) {
         // filter out projects without any build informations
-        var result =  projects.filter(p => p.build);
+        let result = projects.filter(p => p.build);
 
         // filter out successful builds unless showSuccess is configured
         if (!this.report.showSuccess)
@@ -228,31 +238,23 @@ export default class Gitlab extends EventEmitter {
 
     }
 
-    generateHtmlStatus(results) {
-        return new Promise((resolve, reject) => {
+    generateHtmlStatus(projects) {
+        const header = this.report.showSuccess ? `Builds on ${this.projectUrl}` : `Failed builds on ${this.projectUrl}`;
 
-            var header = this.report.showSuccess ? `Builds on ${this.projectUrl}` : `Failed builds on ${this.projectUrl}`;
-            var projects = results;
+        const list = projects.map(project => this.getHtml(project)).join('');
+        const content = `<ul>${list}</ul>`;
 
-
-            //build html content
-            var content = '<ul>';
-            content += projects
-                .map(project => this.getHtml(project))
-                .join('');
-            content += '</ul>'
-
-            return resolve({
-                header: header,
-                content: content,
-                userStyle: this.report.userStyle
-            });
-
+        return Promise.resolve({
+            header,
+            content,
+            userStyle: this.report.userStyle
         });
+
+
     }
 
     getHtml(project) {
-        var state = project.ok ? 'green' : 'red';
+        const state = project.ok ? 'green' : 'red';
 
         if (this.report.dots)
             return `<li><div class="circle circle-${state}"></div><a href="${project.url}">${project.project}</a></li>`;
